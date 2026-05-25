@@ -1,0 +1,116 @@
+---
+interface Props {
+  id: string;
+  title?: string;
+}
+
+const {
+  id,
+  title = "Line Chart",
+} = Astro.props;
+---
+
+<div class="bg-white border border-gray-100 rounded-2xl p-4">
+  <div class="mb-4">
+    <h2 class="text-sm font-semibold text-gray-900">
+      {title}
+    </h2>
+  </div>
+
+  <div class="relative h-[320px]">
+    <canvas id={id}></canvas>
+  </div>
+</div>
+
+<script define:vars={{ id }}>
+  window.__charts ??= {};
+
+  function createChart() {
+    if (typeof Chart === "undefined") {
+      setTimeout(createChart, 100);
+      return;
+    }
+
+    const ctx =
+      document.getElementById(id);
+
+    if (!ctx) return;
+
+    if (window.__charts[id]) {
+      window.__charts[id].destroy();
+    }
+
+    window.__charts[id] =
+      new Chart(ctx, {
+        type: "line",
+
+        data: {
+          labels: [],
+          datasets: [],
+        },
+
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+
+          interaction: {
+            mode: "index",
+            intersect: false,
+          },
+
+          plugins: {
+            legend: {
+              position: "top",
+            },
+          },
+
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+
+    window.updateLineChart = (
+      chartId,
+      newLabels,
+      newDatasets
+    ) => {
+      const chart =
+        window.__charts?.[chartId];
+
+      if (!chart) return;
+
+      chart.data.labels = newLabels;
+
+      chart.data.datasets =
+        newDatasets.map((dataset) => ({
+          label: dataset.label,
+          data: dataset.data,
+          borderColor:
+            dataset.borderColor ||
+            "#2563eb",
+
+          backgroundColor:
+            dataset.backgroundColor ||
+            "rgba(37,99,235,0.12)",
+
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2,
+          pointRadius: 3,
+        }));
+
+      chart.update();
+    };
+  }
+
+  createChart();
+</script>

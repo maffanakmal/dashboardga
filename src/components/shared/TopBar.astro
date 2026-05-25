@@ -1,0 +1,132 @@
+---
+interface Props {
+  title?: string;
+  subtitle?: string;
+
+  showFilter?: boolean;
+
+  selectedYear?: string | number;
+  selectedMonth?: string;
+
+  filterOptions?: {
+    years?: {
+        value: string | number;
+        label: string;
+    }[];
+
+    months?: {
+        value: string;
+        label: string;
+    }[];
+    };
+}
+
+const {
+  title = "Dashboard",
+  subtitle = "Last updated",
+
+  showFilter = true,
+
+  selectedYear = "all",
+  selectedMonth = "all",
+
+  filterOptions = {},
+} = Astro.props;
+
+const years = filterOptions.years ?? [
+    { value: 2026, label: "2026" },
+    { value: 2025, label: "2025" },
+    { value: 2024, label: "2024" },
+    { value: 2023, label: "2023" },
+];
+
+const months = filterOptions.months ?? [
+  { value: "January", label: "Januari" },
+  { value: "February", label: "Februari" },
+  { value: "March", label: "Maret" },
+  { value: "April", label: "April" },
+  { value: "May", label: "Mei" },
+  { value: "June", label: "Juni" },
+  { value: "July", label: "Juli" },
+  { value: "August", label: "Agustus" },
+  { value: "September", label: "September" },
+  { value: "October", label: "Oktober" },
+  { value: "November", label: "November" },
+  { value: "December", label: "Desember" },
+];
+---
+
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div
+    class="max-w-screen-2xl mx-auto px-4 py-3
+           flex flex-col sm:flex-row
+           sm:items-center
+           justify-between
+           gap-3"
+  >
+    <!-- LEFT -->
+    <div class="min-w-0">
+      <div class="text-sm font-semibold text-gray-900 truncate">
+        {title}
+      </div>
+
+      <div class="text-[10px] text-gray-400 mt-0.5 truncate">
+        {subtitle}
+      </div>
+    </div>
+
+    {
+      showFilter && (
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+
+          <!-- YEAR -->
+          <select
+            id="selectYear"
+            class="h-9 px-3 text-xs rounded-lg border border-gray-200
+                   bg-white text-gray-700
+                   focus:outline-none focus:ring-1 focus:ring-blue-500
+                   cursor-pointer
+                   flex-1 sm:flex-none"
+          >
+            <option value="all">Semua Tahun</option>
+
+            {
+                years.map(year => (
+                    <option
+                    value={year.value}
+                    selected={String(selectedYear) === String(year.value)}
+                    >
+                    {year.label}
+                    </option>
+                ))
+            }
+          </select>
+
+          <!-- MONTH -->
+          <select
+            id="selectMonth"
+            class="h-9 px-3 text-xs rounded-lg border border-gray-200
+                   bg-white text-gray-700
+                   focus:outline-none focus:ring-1 focus:ring-blue-500
+                   cursor-pointer
+                   flex-1 sm:flex-none"
+          >
+            <option value="all">Semua Bulan</option>
+
+            {
+              months.map(month => (
+                <option
+                  value={month.value}
+                  selected={selectedMonth === month.value}
+                >
+                  {month.label}
+                </option>
+              ))
+            }
+          </select>
+
+        </div>
+      )
+    }
+  </div>
+</header>

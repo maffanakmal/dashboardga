@@ -1,0 +1,410 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../components/shared/TopBar.astro";
+import ScoreCard from "../components/ui/ScoreCard.astro";
+import TabBar from "../components/shared/TabBar.astro";
+import LineChart from "../components/ui/LineChart.astro";
+
+const tabs = [
+  { key: "overview", label: "Overview" },
+  { key: "electricity", label: "Electricity" },
+  { key: "fuel", label: "Fuel" },
+  { key: "mineral-water", label: "Mineral Water" },
+  { key: "stationary", label: "Stationary" },
+];
+
+import { getData } from "../scripts/fetch.js";
+
+// Ambil seluruh data mentah dari server
+const fuel = await getData("Fuel");
+const electricity = await getData("Electricity");
+const ink = await getData("Ink");
+const paper = await getData("Paper");
+const water = await getData("Mineral Gallon");
+
+// Ambil tahun saat ini untuk default value filter
+const currentYear = new Date().getFullYear();
+---
+
+<Layout>
+  <TopBar
+    title="Dashboard GA"
+    subtitle=""
+    selectedYear={currentYear}
+    selectedMonth=""
+    filterOptions={{
+      years: [
+        { value: 2026, label: "2026" },
+        { value: 2025, label: "2025" },
+        { value: 2024, label: "2024" },
+        { value: 2023, label: "2023" },
+      ],
+      months: [
+        { value: "January", label: "Januari" },
+        { value: "February", label: "Februari" },
+        { value: "March", label: "Maret" },
+        { value: "April", label: "April" },
+        { value: "May", label: "Mei" },
+        { value: "June", label: "Juni" },
+        { value: "July", label: "Juli" },
+        { value: "August", label: "Agustus" },
+        { value: "September", label: "September" },
+        { value: "October", label: "Oktober" },
+        { value: "November", label: "November" },
+        { value: "December", label: "Desember" },
+      ],
+    }}
+  />
+
+  <div class="p-4">
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+      id="scorecard-container"
+    >
+      <ScoreCard
+        id="card-electricity"
+        title="Biaya Listrik"
+        value="Rp 0"
+        subtitle="Electricity cost"
+        color="blue"
+        icon="fa-bolt"
+      />
+      <ScoreCard
+        id="card-fuel"
+        title="Biaya BBM"
+        value="Rp 0"
+        subtitle="Fuel cost"
+        color="blue"
+        icon="fa-gas-pump"
+      />
+      <ScoreCard
+        id="card-ink"
+        title="Jumlah Tinta (Botol)"
+        value="0"
+        subtitle="Ink quantity"
+        color="blue"
+        icon="fa-tint"
+      />
+      <ScoreCard
+        id="card-paper"
+        title="Jumlah Kertas (Rim)"
+        value="0"
+        subtitle="Paper quantity"
+        color="blue"
+        icon="fa-file"
+      />
+      <ScoreCard
+        id="card-water-qty"
+        title="Jumlah Air (Galon)"
+        value="0"
+        subtitle="Water quantity"
+        color="blue"
+        icon="fa-bottle-water"
+      />
+      <ScoreCard
+        id="card-water-cost"
+        title="Jumlah Air (Rp)"
+        value="Rp 0"
+        subtitle="Water Cost"
+        color="blue"
+        icon="fa-coins"
+      />
+    </div>
+  </div>
+
+  <div class="p-4">
+    <TabBar tabs={tabs} activeTab="overview" />
+    <div class="h-px bg-gray-200 my-4"></div>
+    <div class="tab-content">
+      <section id="tab-overview"></section>
+      <section id="tab-electricity" class="hidden">
+        <LineChart
+          id="electricityChart"
+          title="Trend Biaya Listrik"
+          labels={[]}
+          datasets={[]}
+        />
+      </section>
+      <section id="tab-fuel" class="hidden">
+        <LineChart
+          id="fuelChart"
+          title="Trend Biaya BBM"
+          labels={[]}
+          datasets={[]}
+        />
+      </section>
+      <section id="tab-mineral-water" class="hidden">
+        <LineChart
+          id="waterChart"
+          title="Trend Biaya Air Mineral"
+          labels={[]}
+          datasets={[]}
+        />
+      </section>
+      <section id="tab-stationary" class="hidden">
+        <LineChart
+          id="stationaryChart"
+          title="Trend Biaya Alat Tulis Kantor"
+          labels={[]}
+          datasets={[]}
+        />
+      </section>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ electricity, fuel, ink, paper, water, currentYear }}>
+  const yearSelect = document.getElementById("selectYear");
+  const monthSelect = document.getElementById("selectMonth");
+
+  function cleanNumber(val) {
+    if (!val) return 0;
+
+    if (typeof val === "string") {
+      val = val.replace(/Rp|\s/g, "").replace(/\./g, "").replace(/,/g, ".");
+    }
+
+    const num = parseFloat(val);
+
+    return isNaN(num) ? 0 : num;
+  }
+
+  function setCardValue(selector, value) {
+    const el = document.querySelector(selector);
+
+    if (el) {
+      el.innerText = value;
+    }
+  }
+
+  function groupMonthlyData(rows, field) {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const result = {};
+
+    months.forEach((month) => {
+      result[month] = 0;
+    });
+
+    rows.forEach((row) => {
+      const month = row.Month;
+
+      if (!month) return;
+
+      result[month] += cleanNumber(row[field]);
+    });
+
+    return {
+      labels: Object.keys(result),
+      data: Object.values(result),
+    };
+  }
+
+  function groupCompanyData(rows, field) {
+    const result = {};
+
+    rows.forEach((row) => {
+      const company = row.Company || "Unknown";
+
+      if (!result[company]) {
+        result[company] = 0;
+      }
+
+      result[company] += cleanNumber(row[field]);
+    });
+
+    return {
+      labels: Object.keys(result),
+      data: Object.values(result),
+    };
+  }
+
+  function updateDashboard() {
+    const selectedYear =
+      yearSelect?.value === "all" ? "" : yearSelect?.value || currentYear;
+
+    const selectedMonth =
+      monthSelect?.value === "all" ? "" : monthSelect?.value || "";
+
+    const filterData = (rows) =>
+      rows.filter((row) => {
+        const matchYear =
+          !selectedYear || String(row.Year) === String(selectedYear);
+
+        const matchMonth =
+          !selectedMonth ||
+          String(row.Month).toLowerCase() === selectedMonth.toLowerCase();
+
+        return matchYear && matchMonth;
+      });
+
+    const electricityRows = electricity.rows || electricity;
+
+    const fuelRows = fuel.rows || fuel;
+
+    const inkRows = ink.rows || ink;
+
+    const paperRows = paper.rows || paper;
+
+    const waterRows = water.rows || water;
+
+    // FILTERED DATA
+    const filteredElectricity = filterData(electricityRows);
+
+    const filteredFuel = filterData(fuelRows);
+
+    const filteredInk = filterData(inkRows);
+
+    const filteredPaper = filterData(paperRows);
+
+    const filteredWater = filterData(waterRows);
+
+    // TOTALS
+    const totalElectricity = filteredElectricity.reduce(
+      (sum, r) => sum + cleanNumber(r["Amount (IDR)"]),
+      0,
+    );
+
+    const totalFuel = filteredFuel.reduce(
+      (sum, r) => sum + cleanNumber(r["Amount (IDR)"]),
+      0,
+    );
+
+    const totalInk = filteredInk.reduce(
+      (sum, r) => sum + cleanNumber(r["Amount (Bottle)"]),
+      0,
+    );
+
+    const totalPaper = filteredPaper.reduce(
+      (sum, r) => sum + cleanNumber(r["Amount (Ream)"]),
+      0,
+    );
+
+    const totalWaterQty = filteredWater.reduce(
+      (sum, r) => sum + cleanNumber(r["Amount (Gallon)"]),
+      0,
+    );
+
+    const totalWaterCost = filteredWater.reduce(
+      (sum, r) => sum + cleanNumber(r["Amount (IDR)"]),
+      0,
+    );
+
+    // UPDATE SCORECARD
+    setCardValue(
+      "#card-electricity [data-value]",
+      `Rp ${totalElectricity.toLocaleString("id-ID")}`,
+    );
+
+    setCardValue(
+      "#card-fuel [data-value]",
+      `Rp ${totalFuel.toLocaleString("id-ID")}`,
+    );
+
+    setCardValue("#card-ink [data-value]", totalInk.toLocaleString("id-ID"));
+
+    setCardValue(
+      "#card-paper [data-value]",
+      totalPaper.toLocaleString("id-ID"),
+    );
+
+    setCardValue(
+      "#card-water-qty [data-value]",
+      totalWaterQty.toLocaleString("id-ID"),
+    );
+
+    setCardValue(
+      "#card-water-cost [data-value]",
+      `Rp ${totalWaterCost.toLocaleString("id-ID")}`,
+    );
+
+    // UPDATE CHART
+    if (window.updateLineChart) {
+      const electricityMonthly = groupMonthlyData(
+        filteredElectricity,
+        "Amount (IDR)",
+      );
+
+      const fuelMonthly = groupMonthlyData(filteredFuel, "Amount (IDR)");
+
+      const waterMonthlyIDR = groupMonthlyData(filteredWater, "Amount (IDR)");
+      const waterMonthlyGallon = groupMonthlyData(filteredWater, "Amount (Gallon)");
+
+      const inkMonthly = groupMonthlyData(filteredInk, "Amount (Bottle)");
+
+      const paperMonthly = groupMonthlyData(filteredPaper, "Amount (Ream)");
+
+      window.updateLineChart("electricityChart", electricityMonthly.labels, [
+        {
+          label: "Electricity",
+          data: electricityMonthly.data,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.12)",
+        },
+      ]);
+      window.updateLineChart("fuelChart", fuelMonthly.labels, [
+        {
+          label: "Fuel",
+          data: fuelMonthly.data,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.12)",
+        },
+      ]);
+      window.updateLineChart("waterChart", waterMonthlyIDR.labels, [
+        {
+          label: "Water Cost",
+          data: waterMonthlyIDR.data,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.12)",
+        },
+        {
+          label: "Water Quantity",
+          data: waterMonthlyGallon.data,
+          borderColor: "#0f766e",
+          backgroundColor: "rgba(15,118,110,0.12)",
+        },
+      ]);
+      window.updateLineChart("stationaryChart", inkMonthly.labels, [
+        {
+          label: "Ink (Bottle)",
+          data: inkMonthly.data,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.12)",
+        },
+        {
+          label: "Paper (Ream)",
+          data: paperMonthly.data,
+          borderColor: "#0f766e",
+          backgroundColor: "rgba(15,118,110,0.12)",
+        },
+      ]);
+    }
+  }
+
+  if (yearSelect) {
+    yearSelect.addEventListener("change", updateDashboard);
+  }
+
+  if (monthSelect) {
+    monthSelect.addEventListener("change", updateDashboard);
+  }
+
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      updateDashboard();
+    }, 0);
+  });
+</script>
