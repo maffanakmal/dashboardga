@@ -5,13 +5,16 @@ export async function getData(sheet, { limit = 9999, offset = 0 } = {}) {
   try {
     const response = await fetch(BASE_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain" }, // Aman dari CORS preflight
-      body: JSON.stringify({ 
-        apiKey: API_KEY, 
-        action: "read", 
-        sheet, 
-        limit, 
-        offset 
+      cache: "no-store",
+      headers: {
+        "Content-Type": "text/plain",
+      },
+      body: JSON.stringify({
+        apiKey: API_KEY,
+        action: "read",
+        sheet,
+        limit,
+        offset,
       }),
     });
 
