@@ -142,12 +142,20 @@ const currentYear = new Date().getFullYear();
         />
       </section>
       <section id="tab-stationary" class="hidden">
-        <LineChart
-          id="stationaryChart"
-          title="Trend Biaya Alat Tulis Kantor"
-          labels={[]}
-          datasets={[]}
-        />
+        <div class="flex flex-col gap-8">
+          <LineChart
+            id="inkChart"
+            title="Trend Biaya Tinta"
+            labels={[]}
+            datasets={[]}
+          />
+          <LineChart
+            id="paperChart"
+            title="Trend Biaya Kertas"
+            labels={[]}
+            datasets={[]}
+          />
+        </div>
       </section>
     </div>
   </div>
@@ -213,22 +221,209 @@ const currentYear = new Date().getFullYear();
     };
   }
 
-  function groupCompanyData(rows, field) {
-    const result = {};
+  function groupMonthlyByYear(rows, field) {
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const grouped = {};
+
+  rows.forEach((row) => {
+    const year = String(row.Year || "Unknown");
+    const month = row.Month;
+
+    if (!month) return;
+
+    if (!grouped[year]) {
+      grouped[year] = {};
+
+      months.forEach((m) => {
+        grouped[year][m] = 0;
+      });
+    }
+
+    grouped[year][month] += cleanNumber(
+      row[field],
+    );
+  });
+
+  const colors = [
+    "#2563eb",
+    "#0f766e",
+    "#dc2626",
+    "#7c3aed",
+    "#ea580c",
+    "#0891b2",
+  ];
+
+  const datasets = Object.entries(grouped).map(
+    ([year, values], index) => ({
+      label: year,
+      data: months.map(
+        (month) => values[month] || 0,
+      ),
+      borderColor:
+        colors[index % colors.length],
+      backgroundColor:
+        colors[index % colors.length] + "20",
+    }),
+  );
+
+  return {
+    labels: months,
+    datasets,
+  };
+}
+
+  function groupMonthlyBySubCategoryYear(rows, field) {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const grouped = {};
+
+    rows.forEach((row) => {
+      const subCategory = row["Sub Category"] || "Unknown";
+
+      const year = String(row.Year || "Unknown");
+
+      const month = row.Month;
+
+      if (!month) return;
+
+      const key = `${subCategory} - ${year}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {};
+
+        months.forEach((m) => {
+          grouped[key][m] = 0;
+        });
+      }
+
+      grouped[key][month] += cleanNumber(row[field]);
+    });
+
+    const colors = [
+      "#2563eb",
+      "#0f766e",
+      "#dc2626",
+      "#7c3aed",
+      "#ea580c",
+      "#0891b2",
+      "#16a34a",
+      "#db2777",
+    ];
+
+    const datasets = Object.entries(grouped).map(([key, values], index) => ({
+      label: key,
+
+      data: months.map((month) => values[month] || 0),
+
+      borderColor: colors[index % colors.length],
+
+      backgroundColor: colors[index % colors.length] + "20",
+
+      tension: 0.4,
+      fill: false,
+      borderWidth: 2,
+      pointRadius: 3,
+    }));
+
+    return {
+      labels: months,
+      datasets,
+    };
+  }
+
+  function groupMonthlyByCompanyYear(rows, field) {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const grouped = {};
 
     rows.forEach((row) => {
       const company = row.Company || "Unknown";
 
-      if (!result[company]) {
-        result[company] = 0;
+      const year = String(row.Year || "Unknown");
+
+      const month = row.Month;
+
+      if (!month) return;
+
+      const key = `${company} - ${year}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {};
+
+        months.forEach((m) => {
+          grouped[key][m] = 0;
+        });
       }
 
-      result[company] += cleanNumber(row[field]);
+      grouped[key][month] += cleanNumber(row[field]);
     });
 
+    const colors = [
+      "#2563eb",
+      "#0f766e",
+      "#dc2626",
+      "#7c3aed",
+      "#ea580c",
+      "#0891b2",
+      "#16a34a",
+      "#db2777",
+    ];
+
+    const datasets = Object.entries(grouped).map(([key, values], index) => ({
+      label: key,
+
+      data: months.map((month) => values[month] || 0),
+
+      borderColor: colors[index % colors.length],
+
+      backgroundColor: colors[index % colors.length] + "20",
+
+      tension: 0.4,
+    }));
+
     return {
-      labels: Object.keys(result),
-      data: Object.values(result),
+      labels: months,
+      datasets,
     };
   }
 
@@ -333,36 +528,31 @@ const currentYear = new Date().getFullYear();
 
     // UPDATE CHART
     if (window.updateLineChart) {
-      const electricityMonthly = groupMonthlyData(
+      const electricityData = groupMonthlyBySubCategoryYear(
         filteredElectricity,
         "Amount (IDR)",
       );
 
-      const fuelMonthly = groupMonthlyData(filteredFuel, "Amount (IDR)");
+      const fuelData = groupMonthlyByCompanyYear(filteredFuel, "Amount (IDR)");
 
       const waterMonthlyIDR = groupMonthlyData(filteredWater, "Amount (IDR)");
-      const waterMonthlyGallon = groupMonthlyData(filteredWater, "Amount (Gallon)");
+      
+      const waterMonthlyGallon = groupMonthlyData(
+        filteredWater,
+        "Amount (Gallon)",
+      );
 
-      const inkMonthly = groupMonthlyData(filteredInk, "Amount (Bottle)");
+      const inkMonthly = groupMonthlyByYear(filteredInk, "Amount (Bottle)");
 
-      const paperMonthly = groupMonthlyData(filteredPaper, "Amount (Ream)");
+      const paperMonthly = groupMonthlyByCompanyYear(filteredPaper, "Amount (Ream)");
 
-      window.updateLineChart("electricityChart", electricityMonthly.labels, [
-        {
-          label: "Electricity",
-          data: electricityMonthly.data,
-          borderColor: "#2563eb",
-          backgroundColor: "rgba(37,99,235,0.12)",
-        },
-      ]);
-      window.updateLineChart("fuelChart", fuelMonthly.labels, [
-        {
-          label: "Fuel",
-          data: fuelMonthly.data,
-          borderColor: "#2563eb",
-          backgroundColor: "rgba(37,99,235,0.12)",
-        },
-      ]);
+      window.updateLineChart(
+        "electricityChart",
+        electricityData.labels,
+        electricityData.datasets,
+      );
+      window.updateLineChart("fuelChart", fuelData.labels, fuelData.datasets);
+      
       window.updateLineChart("waterChart", waterMonthlyIDR.labels, [
         {
           label: "Water Cost",
@@ -377,20 +567,17 @@ const currentYear = new Date().getFullYear();
           backgroundColor: "rgba(15,118,110,0.12)",
         },
       ]);
-      window.updateLineChart("stationaryChart", inkMonthly.labels, [
-        {
-          label: "Ink (Bottle)",
-          data: inkMonthly.data,
-          borderColor: "#2563eb",
-          backgroundColor: "rgba(37,99,235,0.12)",
-        },
-        {
-          label: "Paper (Ream)",
-          data: paperMonthly.data,
-          borderColor: "#0f766e",
-          backgroundColor: "rgba(15,118,110,0.12)",
-        },
-      ]);
+      window.updateLineChart(
+        "inkChart",
+        inkMonthly.labels,
+        inkMonthly.datasets,
+      );
+
+      window.updateLineChart(
+        "paperChart",
+        paperMonthly.labels,
+        paperMonthly.datasets,
+      );
     }
   }
 

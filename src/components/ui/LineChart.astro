@@ -2,43 +2,61 @@
 interface Props {
   id: string;
   title?: string;
+  height?: string;
 }
 
 const {
   id,
   title = "Line Chart",
+  height = "320px",
 } = Astro.props;
 ---
 
-<div class="bg-white border border-gray-100 rounded-2xl p-4">
+<div class="bg-white border border-gray-100 rounded-2xl p-4 w-full overflow-hidden">
   <div class="mb-4">
     <h2 class="text-sm font-semibold text-gray-900">
       {title}
     </h2>
   </div>
 
-  <div class="relative h-[320px]">
-    <canvas id={id}></canvas>
+  <div
+    class="relative w-full"
+    style={`height:${height}`}
+  >
+    <canvas
+      id={id}
+      class="w-full h-full"
+    ></canvas>
   </div>
 </div>
 
 <script define:vars={{ id }}>
   window.__charts ??= {};
 
-  function createChart() {
+  function waitChart() {
     if (typeof Chart === "undefined") {
-      setTimeout(createChart, 100);
+      requestAnimationFrame(waitChart);
       return;
     }
 
-    const ctx =
+    initChart();
+  }
+
+  function initChart() {
+    const canvas =
       document.getElementById(id);
 
-    if (!ctx) return;
+    if (!canvas) return;
 
-    if (window.__charts[id]) {
-      window.__charts[id].destroy();
+    const existing =
+      window.__charts[id];
+
+    if (existing) {
+      existing.destroy();
     }
+
+    const ctx =
+      canvas.getContext("2d");
 
     window.__charts[id] =
       new Chart(ctx, {
@@ -52,6 +70,8 @@ const {
         options: {
           responsive: true,
           maintainAspectRatio: false,
+
+          resizeDelay: 150,
 
           interaction: {
             mode: "index",
@@ -80,26 +100,27 @@ const {
 
     window.updateLineChart = (
       chartId,
-      newLabels,
-      newDatasets
+      labels,
+      datasets
     ) => {
       const chart =
         window.__charts?.[chartId];
 
       if (!chart) return;
 
-      chart.data.labels = newLabels;
+      chart.data.labels = labels;
 
       chart.data.datasets =
-        newDatasets.map((dataset) => ({
+        datasets.map((dataset) => ({
           label: dataset.label,
           data: dataset.data,
+
           borderColor:
-            dataset.borderColor ||
+            dataset.borderColor ??
             "#2563eb",
 
           backgroundColor:
-            dataset.backgroundColor ||
+            dataset.backgroundColor ??
             "rgba(37,99,235,0.12)",
 
           tension: 0.4,
@@ -110,7 +131,14 @@ const {
 
       chart.update();
     };
+
+    window.addEventListener(
+      "resize",
+      () => {
+        window.__charts[id]?.resize();
+      }
+    );
   }
 
-  createChart();
+  waitChart();
 </script>
